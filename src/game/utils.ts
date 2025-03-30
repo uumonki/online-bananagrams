@@ -1,3 +1,5 @@
+import { MultiSet } from 'mnemonist';
+
 /**
  * In-place shuffle of an array.
  */
@@ -19,8 +21,18 @@ export function shuffle<T>(array: T[]): T[] {
   return array;
 };
 
+/**
+ * Subtract two multisets. Assumes b is a subset of a.
+ */
+export function subtractMultiSet<T>(a: MultiSet<T>, b: MultiSet<T>): MultiSet<T> {
+  const result = new MultiSet<T>();
+  a.forEachMultiplicity((count, key) => {
+    result.add(key, count - b.multiplicity(key));
+  });
+  return result;
+}
 
-export function validateWord(word: string, originWord?: string): boolean {
+export function validateEnglishWord(word: string, originWord?: string): boolean {
   // Check if word is at least 3 characters long
   if (word.length < 3) return false;
 

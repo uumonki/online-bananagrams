@@ -1,10 +1,10 @@
 import { Server } from 'socket.io';
-import GameState from 'game/GameState';
+import Game from 'game/Game';
 import { MAX_PLAYERS } from 'config';
 
 export default class Room {
   private players: string[] = [];
-  private gameState: GameState = new GameState();
+  private gameState: Game = new Game();
   private started = false;
 
   constructor(
@@ -30,7 +30,7 @@ export default class Room {
   }
 
   broadcastState() {
-    this.io.to(this.pin).emit('state_update', this.gameState.getPublicState());
+    this.io.to(this.pin).emit('state_update', this.gameState.getGameState());
   }
 
   // More methods for game logic will go here
