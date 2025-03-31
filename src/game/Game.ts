@@ -79,15 +79,10 @@ export default class Game {
   ): MultiSet<string> | undefined {
     const wordLetters = MultiSet.from(word);
     const targetWordLetters = MultiSet.from(targetWord);
-    if (
-      this.playerWords[targetPlayerId]?.includes(targetWord) &&
-      MultiSet.isSubset(targetWordLetters, wordLetters)
-    ) {
-      targetWordLetters.forEachMultiplicity((count, key) => {
-        wordLetters.remove(key, count);
-      });
-      return wordLetters;
-    } else return;
+    const isValidSteal = (this.playerWords[targetPlayerId]?.includes(targetWord) &&
+      MultiSet.isSubset(targetWordLetters, wordLetters));
+
+    if (isValidSteal) return subtractMultiSet(wordLetters, targetWordLetters);
   }
 
   private addWordToPlayer(playerId: string, word: string) {
