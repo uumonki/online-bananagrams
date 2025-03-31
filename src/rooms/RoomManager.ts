@@ -9,25 +9,6 @@ export default class RoomManager {
 
   constructor(private io: Server) { }
 
-  handleConnection(socket: Socket) {
-    socket.on('create_room', (cb) => {
-      const pin = this.createRoom(socket);
-      socket.join(pin);
-      cb({ success: true, pin });
-    });
-
-    socket.on('join_room', ({ pin }, cb) => {
-      const room = this.rooms.get(pin);
-      if (room === undefined) return cb({ success: false, message: 'Room not found' });
-      if (room.isFull()) return cb({ success: false, message: 'Room is full' });
-
-      socket.join(pin);
-      room.addPlayer(socket.id);
-      cb({ success: true });
-      room.broadcastState();
-    });
-  }
-
   createRoom(socket: Socket): string {
     const pin = this.generateRoomPin();
     const room = new Room(pin, socket.id, this.io);
@@ -39,9 +20,37 @@ export default class RoomManager {
     this.rooms.delete(pin);
   }
 
+  addPlayerToRoom(pin: string, playerId: string) {
+    // requires hasRoom(pin) to be true
+    this.rooms.get(pin)!.addPlayer(playerId);
+  }
+
+  disconnectPlayer(socket: Socket) {
+    const room = this.getRoomBySocket(socket);
+    if (room) {
+      room.removePlayer(socket.id);
+      if (room.getPlayers().length === 0) {
+        this.closeRoom(room.pin);
+      }
+    }
+  }
+
+  private getRoomBySocket(socket: Socket): Room | undefined {
+    return [...this.rooms.values()].find(room => room.hasPlayer(socket.id));
+  }
+
+  hasRoom(pin: string): boolean {
+    return this.rooms.has(pin);
+  }
+
+  roomFull(pin: string): boolean {
+    // requires hasRoom(pin) to be true
+    return this.rooms.get(pin)!.isFull();
+  }
+
   generateRoomPin(): string {
     if (this.atCapacity()) {
-      throw new Error('Room capacity reached');
+      return '';
     }
     var next = this.roomHash(++this.currentRoomIndex).toString().padStart(4, '0');
     while (this.rooms.has(next)) {

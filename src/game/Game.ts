@@ -1,7 +1,8 @@
 import { MultiSet } from 'mnemonist';
 
-import { GameState } from './types';
-import { shuffle, validateEnglishWord, subtractMultiSet } from './utils';
+import { GameState } from 'types';
+import { shuffle, subtractMultiSet } from 'utils';
+import { validateEnglishWord } from './utils';
 import { letterFrequencyTable } from 'config';
 
 const unshuffledDeck: string[] = Object.entries(letterFrequencyTable).flatMap(

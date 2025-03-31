@@ -1,20 +1,32 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { v4 as uuidv4 } from 'uuid';
-import RoomManager from 'rooms/RoomManager';
+import cors from 'cors';
+import { setupWebSocket } from 'ws';
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: '*' } });
-const PORT = process.env.PORT || 3000;
-
-const gameRoomManager = new RoomManager(io);
-
-io.on('connection', (socket) => {
-  gameRoomManager.handleConnection(socket);
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*', // change this to frontend origin for production
+    methods: ['GET', 'POST']
+  }
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+// Apply any middleware here
+app.use(cors());
+app.use(express.json());
+
+// health check route
+app.get('/', (req, res) => {
+  res.send('Bananagrams server running!');
+});
+
+// WS handlers
+setupWebSocket(io);
+
+// start server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
 });
