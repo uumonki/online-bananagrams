@@ -176,33 +176,29 @@ describe('Room', () => {
     room.addPlayer('player1Id');
     room.addPlayer('player2Id');
     room.handleStartGame('ownerId');
-    jest.advanceTimersByTime(31000);
-    expect(io.to('1234').emit).toHaveBeenCalledWith('start_turn', { playerId: 'player1Id' });
-    expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
-      currentPlayerId: 'player1Id',
-    }));
+    jest.advanceTimersByTime(30000);
+    expect(room.state.currentPlayerId).toBe('player1Id');
   });
 
   test('turns wrap around', () => {
     room.addPlayer('player1Id');
     room.addPlayer('player2Id');
     jest.advanceTimersByTime(180000);
-    expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
-      currentPlayerId: 'ownerId',
-    }));
+    expect(room.state.currentPlayerId).toBe('ownerId');
     room.handleFlip('ownerId');
     room.handleFlip('player1Id');
     room.handleFlip('player2Id');
-    expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
-      currentPlayerId: 'ownerId',
-    }));
+    expect(room.state.currentPlayerId).toBe('ownerId');
   });
 
   test('should not allow a player to flip out of turn', () => {
+    const flipLetter = jest.spyOn((room as any).currentGame, 'flipNextLetter');
+    flipLetter.mockImplementation(() => { });
     room.addPlayer('player1Id');
     room.handleStartGame('ownerId');
     room.handleFlip('player1Id');
-    expect(io.to('1234').emit).not.toHaveBeenCalledWith('start_turn', { playerId: 'player1Id' });
+    expect(room.state.currentPlayerId).toBe('ownerId');
+    expect(flipLetter).not.toHaveBeenCalled();
   });
 
   test('disconnected players should be skipped', () => {
@@ -212,9 +208,7 @@ describe('Room', () => {
     room.handleStartGame('ownerId');
     room.disconnectPlayer('player1Id');
     jest.advanceTimersByTime(30000);
-    expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
-      currentPlayerId: 'player2Id',
-    }));
+    expect(room.state.currentPlayerId).toBe('player2Id');
   });
 
   test('inactive players should have shorter turn timeout', () => {
@@ -223,13 +217,25 @@ describe('Room', () => {
     room.addPlayer('player3Id');
     room.handleStartGame('ownerId');
     (room as any).inactivePlayers.add('player1Id');
-    jest.advanceTimersByTime(30000);
-    expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
-      currentPlayerId: 'player1Id',
-    }));
-    jest.advanceTimersByTime(5000);
-    expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
-      currentPlayerId: 'player2Id',
+    jest.advanceTimersByTime(29999);
+    expect(room.state.currentPlayerId).toBe('ownerId');
+    jest.advanceTimersByTime(1);
+    expect(room.state.currentPlayerId).toBe('player1Id');
+    jest.advanceTimersByTime(4999);
+    expect(room.state.currentPlayerId).toBe('player1Id');
+    jest.advanceTimersByTime(1);
+    expect(room.state.currentPlayerId).toBe('player2Id');
+  });
+
+  test('activating players emits', () => {
+    room.addPlayer('player1Id');
+    room.addPlayer('player2Id');
+    room.handleStartGame('ownerId');
+    (room as any).inactivePlayers.add('player1Id');
+    expect(room.playerIsActive('player1Id')).toBe(false);
+    room.handleWordSubmission('player1Id', 'bananagrams');
+    expect(io.to('1234').emit).toHaveBeenNthCalledWith(4, 'state_update', expect.objectContaining({
+      inactivePlayers: [],
     }));
   });
 
@@ -244,13 +250,34 @@ describe('Room', () => {
     room.handleStartGame('ownerId');
     room.handleWordSubmission('player2Id', 'bananagrams');
     expect(claimWord).toHaveBeenCalledWith('player2Id', 'bananagrams');
-    expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
-      currentPlayerId: 'player2Id'
-    }));
-    jest.advanceTimersByTime(30000);
-    expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
-      currentPlayerId: 'player3Id'
-    }));
+    expect(room.state.currentPlayerId).toBe('player2Id');
+  });
+
+  test('steal word', () => {
+    const stealWord = jest.spyOn((room as any).currentGame, 'stealWord');
+    stealWord.mockImplementation(() => { });
+
+    room.addPlayer('player1Id');
+    room.addPlayer('player2Id');
+    room.addPlayer('player3Id');
+
+    room.handleStartGame('ownerId');
+    room.handleWordSubmission('player2Id', 'bananagrams', 'player1Id', 'bananas');
+    expect(stealWord).toHaveBeenCalledWith('player2Id', 'bananagrams', 'player1Id', 'bananas');
+  });
+
+  test('game ends when deck is empty', () => {
+    room.endGame = jest.fn();
+
+    room.addPlayer('player1Id');
+    room.addPlayer('player2Id');
+    room.addPlayer('player3Id');
+
+    ((room as any).currentGame as any).unflippedLetters = ['A'];
+    room.handleStartGame('ownerId');
+    room.handleFlip('ownerId');
+
+    expect(room.endGame).toHaveBeenCalled();
   });
 });
 

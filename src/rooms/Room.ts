@@ -79,7 +79,7 @@ export default class Room {
   }
 
   private activatePlayer(playerId: string) {
-    if (this.inactivePlayers.delete(playerId) && this.disconnectedPlayers.delete(playerId)) {
+    if (this.inactivePlayers.delete(playerId) || this.disconnectedPlayers.delete(playerId)) {
       this.broadcastState();
     }
   }
