@@ -66,10 +66,12 @@ export default class Room {
     return this.players.length >= MAX_PLAYERS;
   }
 
-  addPlayer(playerId: string) {
+  connectPlayer(playerId: string) {
     if (!this.players.includes(playerId) && !this.isFull()) {
       this.players.push(playerId);
       this.broadcastState();
+    } else if (this.disconnectedPlayers.has(playerId)) {
+      this.reconnectPlayer(playerId);
     }
   }
 

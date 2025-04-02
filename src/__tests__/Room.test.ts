@@ -14,7 +14,7 @@ describe('Room', () => {
       emit: jest.fn(),
     });
     room = new Room('1234', io);
-    room.addPlayer('ownerId');
+    room.connectPlayer('ownerId');
   });
 
   afterEach(() => {
@@ -25,41 +25,41 @@ describe('Room', () => {
   test('add player', () => {
     expect(room.hasPlayer('player1Id')).toBe(false);
     expect(room.numPlayers).toBe(1); // owner is in the room
-    room.addPlayer('player1Id');
+    room.connectPlayer('player1Id');
     expect(room.hasPlayer('player1Id')).toBe(true);
     expect(room.isFull()).toBe(false);
     expect(room.numPlayers).toBe(2);
   });
 
   test('remove player', () => {
-    room.addPlayer('player1Id');
+    room.connectPlayer('player1Id');
     room.disconnectPlayer('player1Id');
     expect(room.hasPlayer('player1Id')).toBe(false);
     expect(room.numPlayers).toBe(1);
   });
 
   test('has player', () => {
-    room.addPlayer('player1Id');
+    room.connectPlayer('player1Id');
     expect(room.hasPlayer('player1Id')).toBe(true);
     expect(room.hasPlayer('player2Id')).toBe(false);
   });
 
   test('disconnect and reconnect while active', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
     room.handleStartGame('ownerId');
     room.disconnectPlayer('player1Id');
     expect(room.numPlayers).toBe(3);
     expect(room.numConnectedPlayers).toBe(2);
     expect(room.hasPlayer('player1Id')).toBe(true);
     expect(room.playerIsActive('player1Id')).toBe(false);
-    room.reconnectPlayer('player1Id');
+    room.connectPlayer('player1Id');
     expect(room.numConnectedPlayers).toBe(3);
   });
 
   test('disconnecting everyone resets game', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
     room.handleStartGame('ownerId');
     room.disconnectPlayer('ownerId');
     room.disconnectPlayer('player1Id');
@@ -68,8 +68,8 @@ describe('Room', () => {
   });
 
   test('end game with disconnected players', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
     room.handleStartGame('ownerId');
     room.disconnectPlayer('player1Id');
     expect(room.numConnectedPlayers).toBe(2);
@@ -80,21 +80,21 @@ describe('Room', () => {
   });
 
   test('owner disconnect should change owner', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
     room.handleStartGame('ownerId');
     room.disconnectPlayer('ownerId');
     expect(room.ownerId).toBe('player1Id');
   });
 
   test('player change should broadcast state', () => {
-    room.addPlayer('player1Id');
+    room.connectPlayer('player1Id');
     expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
       players: ['ownerId', 'player1Id'],
     }));
-    room.addPlayer('player2Id');
+    room.connectPlayer('player2Id');
     expect(io.to('1234').emit).toHaveBeenCalledTimes(3);
-    room.addPlayer('player1Id');
+    room.connectPlayer('player1Id');
     expect(io.to('1234').emit).toHaveBeenCalledTimes(3);
     room.disconnectPlayer('player1Id');
     expect(io.to('1234').emit).toHaveBeenLastCalledWith('state_update', expect.objectContaining({
@@ -110,24 +110,24 @@ describe('Room', () => {
 
   test('check full room', () => {
     expect(room.isFull()).toBe(false);
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
-    room.addPlayer('player3Id');
-    room.addPlayer('player4Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
+    room.connectPlayer('player3Id');
+    room.connectPlayer('player4Id');
     expect(room.isFull()).toBe(true);
   });
 
   test('cannot add player to full room', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
-    room.addPlayer('player3Id');
-    room.addPlayer('player4Id');
-    room.addPlayer('player5Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
+    room.connectPlayer('player3Id');
+    room.connectPlayer('player4Id');
+    room.connectPlayer('player5Id');
     expect(room.numPlayers).toBe(5);
   });
 
   test('only owner can start game', () => {
-    room.addPlayer('player1Id');
+    room.connectPlayer('player1Id');
     room.handleStartGame('player1Id');
     expect(room.active).toBe(false);
     room.handleStartGame('ownerId');
@@ -137,13 +137,13 @@ describe('Room', () => {
   test('cannot start with less than 2 players', () => {
     room.handleStartGame('ownerId');
     expect(room.active).toBe(false);
-    room.addPlayer('player1Id');
+    room.connectPlayer('player1Id');
     room.handleStartGame('ownerId');
     expect(room.active).toBe(true);
   });
 
   test('start game', () => {
-    room.addPlayer('player1Id');
+    room.connectPlayer('player1Id');
     room.handleStartGame('ownerId');
     expect(io.to).toHaveBeenCalledWith('1234');
     expect(io.to('1234').emit).toHaveBeenCalledWith('start_turn', { playerId: 'ownerId' });
@@ -157,8 +157,8 @@ describe('Room', () => {
   });
 
   test('flip', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
     room.handleStartGame('ownerId');
     jest.advanceTimersByTime(2000);
     room.handleFlip('ownerId');
@@ -173,16 +173,16 @@ describe('Room', () => {
   });
 
   test('timeout forces flip', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
     room.handleStartGame('ownerId');
     jest.advanceTimersByTime(30000);
     expect(room.state.currentPlayerId).toBe('player1Id');
   });
 
   test('turns wrap around', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
     jest.advanceTimersByTime(180000);
     expect(room.state.currentPlayerId).toBe('ownerId');
     room.handleFlip('ownerId');
@@ -194,7 +194,7 @@ describe('Room', () => {
   test('should not allow a player to flip out of turn', () => {
     const flipLetter = jest.spyOn((room as any).currentGame, 'flipNextLetter');
     flipLetter.mockImplementation(() => { });
-    room.addPlayer('player1Id');
+    room.connectPlayer('player1Id');
     room.handleStartGame('ownerId');
     room.handleFlip('player1Id');
     expect(room.state.currentPlayerId).toBe('ownerId');
@@ -202,9 +202,9 @@ describe('Room', () => {
   });
 
   test('disconnected players should be skipped', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
-    room.addPlayer('player3Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
+    room.connectPlayer('player3Id');
     room.handleStartGame('ownerId');
     room.disconnectPlayer('player1Id');
     jest.advanceTimersByTime(30000);
@@ -212,9 +212,9 @@ describe('Room', () => {
   });
 
   test('inactive players should have shorter turn timeout', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
-    room.addPlayer('player3Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
+    room.connectPlayer('player3Id');
     room.handleStartGame('ownerId');
     (room as any).inactivePlayers.add('player1Id');
     jest.advanceTimersByTime(29999);
@@ -228,8 +228,8 @@ describe('Room', () => {
   });
 
   test('activating players emits', () => {
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
     room.handleStartGame('ownerId');
     (room as any).inactivePlayers.add('player1Id');
     expect(room.playerIsActive('player1Id')).toBe(false);
@@ -243,9 +243,9 @@ describe('Room', () => {
     const claimWord = jest.spyOn((room as any).currentGame, 'claimWord');
     claimWord.mockImplementation(() => { });
 
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
-    room.addPlayer('player3Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
+    room.connectPlayer('player3Id');
 
     room.handleStartGame('ownerId');
     room.handleWordSubmission('player2Id', 'bananagrams');
@@ -257,9 +257,9 @@ describe('Room', () => {
     const stealWord = jest.spyOn((room as any).currentGame, 'stealWord');
     stealWord.mockImplementation(() => { });
 
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
-    room.addPlayer('player3Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
+    room.connectPlayer('player3Id');
 
     room.handleStartGame('ownerId');
     room.handleWordSubmission('player2Id', 'bananagrams', 'player1Id', 'bananas');
@@ -269,9 +269,9 @@ describe('Room', () => {
   test('game ends when deck is empty', () => {
     room.endGame = jest.fn();
 
-    room.addPlayer('player1Id');
-    room.addPlayer('player2Id');
-    room.addPlayer('player3Id');
+    room.connectPlayer('player1Id');
+    room.connectPlayer('player2Id');
+    room.connectPlayer('player3Id');
 
     ((room as any).currentGame as any).unflippedLetters = ['A'];
     room.handleStartGame('ownerId');

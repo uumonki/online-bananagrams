@@ -13,7 +13,7 @@ export default class RoomManager {
   createRoom(socket: Socket): string {
     const pin = this.generateRoomPin();
     const room = new Room(pin, this.io);
-    room.addPlayer(socket.id);
+    room.connectPlayer(socket.id);
     this.rooms.set(pin, room);
     return pin;
   }
@@ -24,7 +24,7 @@ export default class RoomManager {
 
   addPlayerToRoom(pin: string, playerId: string) {
     // requires hasRoom(pin) to be true
-    this.rooms.get(pin)!.addPlayer(playerId);
+    this.rooms.get(pin)!.connectPlayer(playerId);
   }
 
   disconnectPlayer(socket: Socket) {
