@@ -25,10 +25,14 @@ describe('Timer', () => {
   });
 
   test('pause', () => {
+    jest.advanceTimersByTime(500);
     timer.pause();
     jest.advanceTimersByTime(1000);
     expect(callback).not.toHaveBeenCalled();
-    expect(timer.getTimeLeft()).toBe(1000);
+    expect(timer.getTimeLeft()).toBe(500);
+    jest.advanceTimersByTime(500);
+    timer.pause();
+    expect(timer.getTimeLeft()).toBe(500);
 
     timer.start();
     jest.advanceTimersByTime(1000);
@@ -44,5 +48,19 @@ describe('Timer', () => {
     jest.advanceTimersByTime(1000);
     expect(callback).toHaveBeenCalledTimes(1);
     timer.pause();
+  });
+
+  test('start after timeout', () => {
+    jest.advanceTimersByTime(1000);
+    expect(callback).toHaveBeenCalledTimes(1);
+    timer.start();
+    jest.advanceTimersByTime(1000);
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  test('is running', () => {
+    expect(timer.isRunning()).toBe(true);
+    timer.pause();
+    expect(timer.isRunning()).toBe(false);
   });
 });
