@@ -75,12 +75,12 @@ export function shuffle<T>(array: T[]): T[] {
 };
 
 /**
- * Subtract two multisets. Assumes b is a subset of a.
+ * Subtract two multisets. Please check b is a subset of a.
  */
 export function subtractMultiSet<T>(a: MultiSet<T>, b: MultiSet<T>): MultiSet<T> {
   const result = new MultiSet<T>();
   a.forEachMultiplicity((count, key) => {
-    result.add(key, count - b.multiplicity(key));
+    result.add(key, Math.max(count - b.multiplicity(key), 0));
   });
   return result;
 }

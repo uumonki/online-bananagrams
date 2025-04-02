@@ -7,7 +7,10 @@ export interface GameState {
 export interface RoomState {
   active: boolean;
   players: string[];
-  currentPlayer: string;
+  ownerId: string;
+  inactivePlayers: string[];
+  disconnectedPlayers: string[];
+  currentPlayerId: string;
   turnTimeout: number;
   gameState: GameState;
 }

@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io';
 import Room from './Room';
 
 export default class RoomManager {
+  // invariant: all rooms are non-empty
   private rooms: Map<string, Room> = new Map();
   private currentRoomIndex = 0;
   private roomHash = (i: number) => i * 2654435761 % 10000;
@@ -11,7 +12,8 @@ export default class RoomManager {
 
   createRoom(socket: Socket): string {
     const pin = this.generateRoomPin();
-    const room = new Room(pin, socket.id, this.io);
+    const room = new Room(pin, this.io);
+    room.addPlayer(socket.id);
     this.rooms.set(pin, room);
     return pin;
   }
@@ -28,7 +30,7 @@ export default class RoomManager {
   disconnectPlayer(socket: Socket) {
     const room = this.getRoomBySocket(socket);
     if (room) {
-      room.removePlayer(socket.id);
+      room.disconnectPlayer(socket.id);
       if (room.isEmpty()) this.closeRoom(room.pin);
     }
   }
@@ -46,7 +48,7 @@ export default class RoomManager {
     return this.rooms.get(pin)!.isFull();
   }
 
-  generateRoomPin(): string {
+  private generateRoomPin(): string {
     if (this.atCapacity()) {
       return '';
     }

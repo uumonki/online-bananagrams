@@ -2,7 +2,7 @@ import { MultiSet } from 'mnemonist';
 
 import { GameState } from 'types';
 import { shuffle, subtractMultiSet } from 'utils';
-import { validateEnglishWord } from './utils';
+import { validateEnglishWord, validateEnglishWordSteal } from './utils';
 import { letterFrequencyTable } from 'config';
 
 const unshuffledDeck: string[] = Object.entries(letterFrequencyTable).flatMap(
@@ -34,31 +34,49 @@ export default class Game {
     return letter ?? null;
   }
 
-  claimWord(
-    playerId: string,
-    word: string,
-    targetPlayerId?: string,
-    targetWord?: string
-  ): boolean {
-    if (!validateEnglishWord(word, targetWord)) return false;
-
-    const lettersToDraw = targetPlayerId && targetWord
-      ? this.stealWordFrom(word, targetPlayerId, targetWord)
-      : MultiSet.from(word);
-
-    // Check that the target has the target word and that the deck has the letters
-    if (!lettersToDraw) return false;
-    if (MultiSet.isSubset(lettersToDraw!, this.revealedLetters)) return false;
+  claimWord(playerId: string, word: string): boolean {
+    if (!validateEnglishWord(word)) return false;
+    const lettersToDraw = MultiSet.from(word);
+    if (!this.deckHasLetters(lettersToDraw)) return false;
 
     // Update game state
-    this.revealedLetters = subtractMultiSet(this.revealedLetters, lettersToDraw);
-    if (targetPlayerId) this.removeWordFromPlayer(targetPlayerId, targetWord!);
+    this.removeLettersFromDeck(lettersToDraw);
     this.addWordToPlayer(playerId, word);
-
     return true;
   }
 
-  getGameState(): GameState {
+  stealWord(playerId: string, word: string, originPlayerId: string, originWord: string): boolean {
+    if (!validateEnglishWord(word)) return false;
+    if (!validateEnglishWordSteal(word, originWord)) return false;
+
+    const lettersToDraw = this.lettersRemainingAfterStealingFrom(word, originPlayerId, originWord)
+    // Check that the origin has originWord and that the deck has the letters
+    if (!lettersToDraw) return false;
+    if (!this.deckHasLetters(lettersToDraw)) return false;
+
+    // Update game state
+    this.removeLettersFromDeck(lettersToDraw);
+    this.removeWordFromPlayer(originPlayerId, originWord);
+    this.addWordToPlayer(playerId, word);
+    return true;
+  }
+
+  private deckHasLetters(letters: MultiSet<string>): boolean {
+    return MultiSet.isSubset(letters, this.revealedLetters);
+  }
+
+  /**
+   * Validate first this.deckHasLetters(letters) before calling this method.
+   */
+  private removeLettersFromDeck(letters: MultiSet<string>) {
+    this.revealedLetters = subtractMultiSet(this.revealedLetters, letters);
+  }
+
+  deckIsEmpty(): boolean {
+    return this.unflippedLetters.length === 0;
+  }
+
+  get state(): GameState {
     return {
       revealedLetters: [...this.revealedLetters],
       remainingLetters: this.unflippedLetters.length,
@@ -73,7 +91,7 @@ export default class Game {
    * Returns the remaining letters in word after removing targetWord 
    * if valid, otherwise undefined
    */
-  private stealWordFrom(
+  private lettersRemainingAfterStealingFrom(
     word: string,
     targetPlayerId: string,
     targetWord: string
