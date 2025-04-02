@@ -35,6 +35,7 @@ export default class Game {
   }
 
   claimWord(playerId: string, word: string): boolean {
+    if (word.length < 3) return false;
     if (!validateEnglishWord(word)) return false;
     const lettersToDraw = MultiSet.from(word);
     if (!this.deckHasLetters(lettersToDraw)) return false;
@@ -98,10 +99,16 @@ export default class Game {
   ): MultiSet<string> | undefined {
     const wordLetters = MultiSet.from(word);
     const targetWordLetters = MultiSet.from(targetWord);
-    const isValidSteal = (this.playerWords[targetPlayerId]?.includes(targetWord) &&
-      MultiSet.isSubset(targetWordLetters, wordLetters));
+    const isValidSteal = (this.playerHasWord(targetPlayerId, targetWord) &&
+      MultiSet.isSubset(targetWordLetters, wordLetters)) &&
+      word.length > targetWord.length;
 
     if (isValidSteal) return subtractMultiSet(wordLetters, targetWordLetters);
+  }
+
+  private playerHasWord(playerId: string, word: string): boolean {
+    if (!this.playerWords[playerId]) return false;
+    return this.playerWords[playerId].includes(word);
   }
 
   private addWordToPlayer(playerId: string, word: string) {

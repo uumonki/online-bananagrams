@@ -234,7 +234,7 @@ describe('Room', () => {
     (room as any).inactivePlayers.add('player1Id');
     expect(room.playerIsActive('player1Id')).toBe(false);
     room.handleWordSubmission('player1Id', 'bananagrams');
-    expect(io.to('1234').emit).toHaveBeenNthCalledWith(4, 'state_update', expect.objectContaining({
+    expect(io.to('1234').emit).toHaveBeenNthCalledWith(5, 'state_update', expect.objectContaining({
       inactivePlayers: [],
     }));
   });
