@@ -6,12 +6,15 @@ import { MAX_PLAYERS, TURN_TIMEOUT_MS } from 'config';
 
 export default class Room {
   pin: string;
+  active: boolean = false;
 
   private players: string[] = [];
+  // TODO: Implement inactive players
   private inactivePlayers = new Set<number>();
+  // TODO: Implement disconnected players when player disconnects while active
+  private disconnectedPlayers = new Set<number>();
   private currentPlayerIndex = 0;
   private currentGame: Game = new Game();
-  private active = false;
 
   private turnTimeout: Timer | null = null;
 
@@ -30,7 +33,11 @@ export default class Room {
   }
 
   resetGame() {
+    this.active = false;
     this.currentGame = new Game();
+    this.currentPlayerIndex = 0;
+    this.turnTimeout?.pause();
+    this.turnTimeout = null;
     this.broadcastState();
   }
 
@@ -47,9 +54,12 @@ export default class Room {
 
   removePlayer(playerId: string) {
     this.players = this.players.filter(p => p !== playerId);
+    this.broadcastState();
   }
 
-  getPlayers = () => this.players;
+  numPlayers = () => this.players.length;
+
+  isEmpty = () => this.numPlayers() === 0;
 
   hasPlayer(playerId: string) {
     return this.players.includes(playerId);
@@ -57,12 +67,12 @@ export default class Room {
 
   private startTurn() {
     if (this.turnTimeout) this.turnTimeout.pause();
-    this.broadcastState();
     const currentPlayer = this.players[this.currentPlayerIndex];
     this.io.to(this.pin).emit('start_turn', { playerId: currentPlayer });
     this.turnTimeout = new Timer(() => {
       this.flipAndAdvance();
     }, TURN_TIMEOUT_MS);
+    this.broadcastState();
   }
 
   private flipAndAdvance() {

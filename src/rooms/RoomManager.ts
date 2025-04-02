@@ -29,9 +29,7 @@ export default class RoomManager {
     const room = this.getRoomBySocket(socket);
     if (room) {
       room.removePlayer(socket.id);
-      if (room.getPlayers().length === 0) {
-        this.closeRoom(room.pin);
-      }
+      if (room.isEmpty()) this.closeRoom(room.pin);
     }
   }
 
