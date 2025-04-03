@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import Room from '../rooms/Room';
+import Room from 'rooms/Room';
 
 jest.mock('socket.io');
 jest.useFakeTimers();

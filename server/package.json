@@ -21,8 +21,8 @@
   "description": "",
   "main": "server.ts",
   "scripts": {
-    "dev": "nodemon server.ts",
-    "start": "ts-node server.ts",
+    "dev": "nodemon --require tsconfig-paths/register server.ts",
+    "start": "ts-node --require tsconfig-paths/register server.ts",
     "test": "jest",
     "build": "tsc"
   },
