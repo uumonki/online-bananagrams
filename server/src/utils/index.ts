@@ -1,5 +1,53 @@
 import { MultiSet } from 'mnemonist';
 
+export class UniqueRecord<K extends string | number | symbol, V> {
+  private _record: Record<K, V>;
+  private values: Set<V>;
+
+  constructor() {
+    this._record = {} as Record<K, V>;
+    this.values = new Set<V>();
+  }
+
+  public set(key: K, value: V): boolean {
+    if (this.values.has(value)) {
+      return false;
+    }
+    this._record[key] = value;
+    this.values.add(value);
+    return true;
+  }
+
+  public remove(key: K): boolean {
+    const value = this._record[key];
+    if (value === undefined) {
+      return false;
+    }
+    delete this._record[key];
+    this.values.delete(value);
+    return true;
+  }
+
+  public has(value: V): boolean {
+    return this.values.has(value);
+  }
+
+  public filter(predicate: (key: K) => boolean): UniqueRecord<K, V> {
+    const result = new UniqueRecord<K, V>();
+    for (const key of Object.keys(this._record) as K[]) {
+      if (predicate(key)) {
+        result.set(key, this._record[key]);
+      }
+    }
+    return result;
+  }
+
+
+  get record(): Record<K, V> {
+    return this._record;
+  }
+}
+
 /**
  * A wrapper around setTimeout with a method to get the time left.
  * 

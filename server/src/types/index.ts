@@ -7,10 +7,16 @@ export interface GameState {
 export interface RoomState {
   active: boolean;
   players: string[];
+  playerNicknames: Record<string, string>;
   ownerId: string;
   inactivePlayers: string[];
   disconnectedPlayers: string[];
   currentPlayerId: string;
   turnTimeout: number;
   gameState: GameState;
+}
+
+export interface Player {
+  socketId: string;
+  nickname: string;
 }

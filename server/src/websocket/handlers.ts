@@ -1,9 +1,14 @@
 import { Socket } from 'socket.io';
+import { Player } from 'types';
 import RoomManager from 'rooms/RoomManager';
 
 export const handleConnection = (socket: Socket, roomManager: RoomManager) => {
-  socket.on('create_room', () => {
-    const pin = roomManager.createRoom(socket);
+  socket.on('create_room', (nickname: string) => {
+    const player: Player = {
+      socketId: socket.id,
+      nickname: nickname,
+    };
+    const pin = roomManager.createRoomWithPlayer(player);
     if (!pin) {
       socket.emit('room_creation_failed');
       return;
@@ -11,7 +16,7 @@ export const handleConnection = (socket: Socket, roomManager: RoomManager) => {
     socket.emit('room_created', { pin });
   });
 
-  socket.on('join_room', (pin: string) => {
+  socket.on('join_room', (pin: string, nickname: string) => {
     if (!roomManager.hasRoom(pin)) {
       socket.emit('room_not_found');
       return;
@@ -22,7 +27,16 @@ export const handleConnection = (socket: Socket, roomManager: RoomManager) => {
       return;
     }
 
-    roomManager.addPlayerToRoom(pin, socket.id);
+    if (roomManager.hasNickname(pin, nickname)) {
+      socket.emit('nickname_taken');
+      return;
+    }
+
+    const player: Player = {
+      socketId: socket.id,
+      nickname: nickname,
+    };
+    roomManager.addPlayerToRoom(pin, player);
     socket.join(pin);
     socket.emit('room_joined', { pin });
   });

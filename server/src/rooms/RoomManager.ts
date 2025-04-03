@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io';
+import { Player } from 'types';
 import Room from './Room';
 
 export default class RoomManager {
@@ -10,10 +11,10 @@ export default class RoomManager {
 
   constructor(private io: Server) { }
 
-  createRoom(socket: Socket): string {
+  createRoomWithPlayer(player: Player): string {
     const pin = this.generateRoomPin();
     const room = new Room(pin, this.io);
-    room.connectPlayer(socket.id);
+    room.connectPlayer(player.socketId, player.nickname);
     this.rooms.set(pin, room);
     return pin;
   }
@@ -22,9 +23,11 @@ export default class RoomManager {
     this.rooms.delete(pin);
   }
 
-  addPlayerToRoom(pin: string, playerId: string) {
-    // requires hasRoom(pin) to be true
-    this.rooms.get(pin)!.connectPlayer(playerId);
+  addPlayerToRoom(pin: string, player: Player) {
+    if (this.hasRoom(pin)) {
+      const room = this.rooms.get(pin);
+      room!.connectPlayer(player.socketId, player.nickname);
+    }
   }
 
   disconnectPlayer(socket: Socket) {
@@ -46,6 +49,11 @@ export default class RoomManager {
   roomFull(pin: string): boolean {
     // requires hasRoom(pin) to be true
     return this.rooms.get(pin)!.isFull();
+  }
+
+  hasNickname(pin: string, nickname: string): boolean {
+    // requires hasRoom(pin) to be true
+    return this.rooms.get(pin)!.hasNickname(nickname);
   }
 
   private generateRoomPin(): string {

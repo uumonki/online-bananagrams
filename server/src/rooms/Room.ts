@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { RoomState } from 'types';
-import { Timer } from 'utils';
+import { Timer, UniqueRecord } from 'utils';
 import Game from 'game/Game';
 import { MAX_PLAYERS, TURN_TIMEOUT_MS, INACTIVE_TURN_TIMEOUT_MS } from 'config';
 
@@ -8,6 +8,8 @@ export default class Room {
   active: boolean = false;
 
   private players: string[] = [];
+  // invariant: set(players) = playerNicknames.keys()
+  private playerNicknames: UniqueRecord<string, string> = new UniqueRecord();
   // TODO: Implement inactive players
   private inactivePlayers = new Set<string>();
   // TODO: Implement disconnected players when player disconnects while active
@@ -31,6 +33,7 @@ export default class Room {
     return {
       active: this.active,
       players: this.players,
+      playerNicknames: this.playerNicknames.record,
       ownerId: this.ownerId,
       inactivePlayers: [...this.inactivePlayers],
       disconnectedPlayers: [...this.disconnectedPlayers],
@@ -58,6 +61,7 @@ export default class Room {
     // TODO: Implement end game logic, announce score, remove disconnected players
 
     // remove disconnected players
+    this.playerNicknames = this.playerNicknames.filter(p => !this.disconnectedPlayers.has(p));
     this.players = this.players.filter(p => !this.disconnectedPlayers.has(p));
     this.disconnectedPlayers.clear();
   }
@@ -66,16 +70,26 @@ export default class Room {
     return this.players.length >= MAX_PLAYERS;
   }
 
-  connectPlayer(playerId: string) {
-    if (!this.players.includes(playerId) && !this.isFull()) {
-      this.players.push(playerId);
-      this.broadcastState();
-    } else if (this.disconnectedPlayers.has(playerId)) {
-      this.reconnectPlayer(playerId);
-    }
+  hasNickname(nickname: string): boolean {
+    return this.playerNicknames.has(nickname);
   }
 
-  reconnectPlayer(playerId: string) {
+  connectPlayer(playerId: string, nickname: string): boolean {
+    if (!this.players.includes(playerId) && !this.isFull()) {
+      if (this.playerNicknames.set(playerId, nickname)) {
+        // nickname is unique, add player
+        this.players.push(playerId);
+        this.broadcastState();
+        return true;
+      }
+    } else if (this.disconnectedPlayers.has(playerId)) {
+      this.reconnectPlayer(playerId);
+      return true;
+    }
+    return false;
+  }
+
+  private reconnectPlayer(playerId: string) {
     if (this.disconnectedPlayers.delete(playerId))
       this.broadcastState();
   }
@@ -87,18 +101,21 @@ export default class Room {
   }
 
   disconnectPlayer(playerId: string) {
-    if (!this.active) this.removePlayer(playerId);
-    else {
-      this.disconnectedPlayers.add(playerId);
-      // if all players are disconnected, reset the game
-      // to prevent infinite loop
-      if (this.numConnectedPlayers <= 0) this.resetGame();
+    if (this.hasPlayer(playerId)) {
+      if (!this.active) this.removePlayer(playerId);
+      else {
+        this.disconnectedPlayers.add(playerId);
+        // if all players are disconnected, reset the game
+        // to prevent infinite loop
+        if (this.numConnectedPlayers <= 0) this.resetGame();
+      }
+      this.broadcastState();
     }
-    this.broadcastState();
   }
 
   private removePlayer(playerId: string) {
     this.players = this.players.filter(p => p !== playerId);
+    this.playerNicknames.remove(playerId);
     this.inactivePlayers.delete(playerId);
     this.disconnectedPlayers.delete(playerId);
   }

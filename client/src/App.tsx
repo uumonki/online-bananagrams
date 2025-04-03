@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import Lobby from './components/Lobby';
 
+// TODO: handle reconnect-failed, disconnect, and reconnect events
+
 const App: React.FC = () => {
   const [pin, setPin] = useState<string | null>(null);
 
