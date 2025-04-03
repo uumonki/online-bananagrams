@@ -3,7 +3,8 @@
     "express": "^4.21.2",
     "mnemonist": "^0.40.3",
     "socket.io": "^4.8.1",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
@@ -14,6 +15,7 @@
     "nodemon": "^3.1.9",
     "ts-jest": "^29.3.1",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.2"
   },
   "name": "bananagrams-server",
@@ -21,8 +23,8 @@
   "description": "",
   "main": "server.ts",
   "scripts": {
-    "dev": "nodemon --require tsconfig-paths/register server.ts",
-    "start": "ts-node --require tsconfig-paths/register server.ts",
+    "dev": "nodemon --require tsconfig-paths/register src/server.ts",
+    "start": "ts-node --require tsconfig-paths/register src/server.ts",
     "test": "jest",
     "build": "tsc"
   },
