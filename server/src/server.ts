@@ -10,6 +10,9 @@ const io = new Server(server, {
   cors: {
     origin: '*', // change this to frontend origin for production
     methods: ['GET', 'POST']
+  },
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
   }
 });
 

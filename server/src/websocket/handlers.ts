@@ -14,6 +14,7 @@ export const handleConnection = (socket: Socket, roomManager: RoomManager) => {
       socket.emit('room_creation_failed');
       return;
     }
+    socket.join(pin);
     socket.emit('room_created', { pin });
   });
 
@@ -47,4 +48,29 @@ export const handleConnection = (socket: Socket, roomManager: RoomManager) => {
   socket.on('disconnect', () => {
     roomManager.disconnectPlayer(socket);
   });
+
+  socket.on('get_room_state', (pin: string) => {
+    if (!roomManager.hasRoom(pin)) {
+      socket.emit('room_not_found');
+      return;
+    }
+    if (!roomManager.hasPlayer(pin, socket.id)) {
+      return;
+    }
+    const state = roomManager.getRoomState(pin);
+    socket.emit('state_update', state);
+  });
+
+  socket.on('start_game', (pin: string) => {
+    if (!roomManager.hasRoom(pin)) {
+      socket.emit('room_not_found');
+      return;
+    }
+    if (!roomManager.roomHasEnoughPlayers(pin)) {
+      socket.emit('not_enough_players');
+      return;
+    }
+    roomManager.startGameWithOwnerId(pin, socket.id);
+  }
+  );
 };

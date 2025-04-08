@@ -5,6 +5,7 @@ export interface GameState {
 }
 
 export interface RoomState {
+  pin: string;
   active: boolean;
   players: string[];
   playerNicknames: Record<string, string>;

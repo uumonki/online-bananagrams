@@ -2,8 +2,9 @@ import { Server } from 'socket.io';
 import { RoomState } from 'types';
 import { Timer, UniqueRecord } from 'utils';
 import Game from 'game/Game';
-import { MAX_PLAYERS, TURN_TIMEOUT_MS, INACTIVE_TURN_TIMEOUT_MS } from 'config';
+import { MAX_PLAYERS, TURN_TIMEOUT_MS, INACTIVE_TURN_TIMEOUT_MS, MIN_PLAYERS } from 'config';
 
+// TODO: prompt when multiple steals available
 export default class Room {
   active: boolean = false;
 
@@ -12,8 +13,6 @@ export default class Room {
   private playerNicknames: UniqueRecord<string, string> = new UniqueRecord();
   // TODO: Implement inactive players
   private inactivePlayers = new Set<string>();
-  // TODO: Implement disconnected players when player disconnects while active
-  // TODO: Implement emitting when reconnected
   private disconnectedPlayers = new Set<string>();
   private currentPlayerIndex = 0;
   private currentGame: Game = new Game();
@@ -31,6 +30,7 @@ export default class Room {
 
   get state(): RoomState {
     return {
+      pin: this.pin,
       active: this.active,
       players: this.players,
       playerNicknames: this.playerNicknames.record,
@@ -66,6 +66,10 @@ export default class Room {
     this.disconnectedPlayers.clear();
   }
 
+  hasEnoughPlayers(): boolean {
+    return this.players.length >= MIN_PLAYERS;
+  }
+
   isFull(): boolean {
     return this.players.length >= MAX_PLAYERS;
   }
@@ -84,6 +88,7 @@ export default class Room {
       }
     } else if (this.disconnectedPlayers.has(playerId)) {
       this.reconnectPlayer(playerId);
+      this.broadcastState();
       return true;
     }
     return false;

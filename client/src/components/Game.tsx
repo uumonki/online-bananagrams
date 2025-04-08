@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import { RoomState } from '../../../server/src/types';
 import socket from '../socket';
 
 interface GameProps {
-  pin: string;
+  roomState: RoomState;
 }
 
-const Game: React.FC<GameProps> = ({ pin }) => {
+const Game: React.FC<GameProps> = ({ roomState }) => {
   const [letters, setLetters] = useState<string[]>([]);
   const [word, setWord] = useState('');
   const [status, setStatus] = useState('');
   const [yourTurn, setYourTurn] = useState(false);
 
   useEffect(() => {
-    socket.on('table_updated', ({ letters }) => {
-      setLetters(letters);
+    socket.on('table_updated', (data: { letters: string[] }) => {
+      setLetters(data.letters);
     });
 
     socket.on('your_turn', () => {
@@ -45,18 +46,21 @@ const Game: React.FC<GameProps> = ({ pin }) => {
 
   const submitWord = () => {
     if (!word.trim()) return;
-    socket.emit('submit_word', { word: word.trim(), pin });
+    socket.emit('submit_word', { word: word.trim(), pin: roomState.pin });
   };
 
   const flipLetter = () => {
-    socket.emit('flip_letter', { pin });
+    socket.emit('flip_letter', { pin: roomState.pin });
     setYourTurn(false);
     setStatus('Flipped a letter.');
   };
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">Room PIN: {pin}</h2>
+      <pre>
+        <code>{JSON.stringify(roomState, null, 2)}</code>
+      </pre>
+      <p>Room {roomState.pin}</p>
       <div className="flex flex-wrap gap-2">
         {letters.map((char, idx) => (
           <span

@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "bananagrams-client",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -27,6 +27,7 @@
     "globals": "^15.15.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0"

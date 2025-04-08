@@ -38,12 +38,24 @@ export default class RoomManager {
     }
   }
 
+  startGameWithOwnerId(pin: string, ownerId: string) {
+    if (this.hasRoom(pin)) {
+      const room = this.rooms.get(pin);
+      room!.handleStartGame(ownerId);
+    }
+  }
+
   private getRoomBySocket(socket: Socket): Room | undefined {
     return [...this.rooms.values()].find(room => room.hasPlayer(socket.id));
   }
 
   hasRoom(pin: string): boolean {
     return this.rooms.has(pin);
+  }
+
+  roomHasEnoughPlayers(pin: string): boolean {
+    // requires hasRoom(pin) to be true
+    return this.rooms.get(pin)!.hasEnoughPlayers();
   }
 
   roomFull(pin: string): boolean {
@@ -54,6 +66,16 @@ export default class RoomManager {
   hasNickname(pin: string, nickname: string): boolean {
     // requires hasRoom(pin) to be true
     return this.rooms.get(pin)!.hasNickname(nickname);
+  }
+
+  hasPlayer(pin: string, socketId: string): boolean {
+    // requires hasRoom(pin) to be true
+    return this.rooms.get(pin)!.hasPlayer(socketId);
+  }
+
+  getRoomState(pin: string) {
+    // requires hasRoom(pin) to be true
+    return this.rooms.get(pin)?.state;
   }
 
   private generateRoomPin(): string {

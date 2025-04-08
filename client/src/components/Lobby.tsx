@@ -39,6 +39,14 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
     };
   }, [onJoined]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefillPin = params.get('pin');
+    if (prefillPin) {
+      setJoinPin(prefillPin);
+    }
+  }, []);
+
   const isValidNickname = (name: string): boolean => {
     const nicknameRegex = /^[a-zA-Z0-9]{1,16}$/;
     return nicknameRegex.test(name);
@@ -65,20 +73,21 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center">
-      <h1 className="text-3xl mb-2">Bananagrams</h1>
-      <div className="flex flex-col space-y-2 p-6 bg-white border-2 border-stone-100 rounded drop-shadow-xl w-100">
+    <div className="flex flex-col items-center justify-center space-y-4">
+      <h1 className="text-3xl mb-3">Bananagrams</h1>
+      <div className="flex flex-col space-y-2 p-6 bg-white rounded drop-shadow-sm w-100">
         <input
-          className="border px-3 py-2 mb-4 rounded text-center"
+          className="border px-3 py-2 rounded text-center bg-white"
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           placeholder="Enter your nickname"
           maxLength={16}
         />
-
+      </div>
+      <div className="flex flex-col space-y-2 p-6 bg-white rounded drop-shadow-sm w-100">
         <div className="flex space-x-2">
           <input
-            className="border px-3 py-2 rounded flex-grow text-center w-2/3"
+            className="border px-3 py-2 rounded flex-grow text-center w-2/3 bg-white"
             value={joinPin}
             onChange={(e) => setJoinPin(e.target.value)}
             placeholder="Room PIN"
@@ -92,7 +101,7 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
           </button>
         </div>
 
-        <div className="text-center text-sm text-gray-500">- OR -</div>
+        <div className="text-center text-sm text-gray-500"> — OR — </div>
 
         <button
           className="px-4 py-2 bg-white border text-black hover:bg-gray-100 rounded"
@@ -100,9 +109,8 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
         >
           Create Room
         </button>
-
-        {status && <div className="text-sm text-red-600 text-center">{status}</div>}
       </div>
+      {status && <div className="text-sm text-red-600 text-center">{status}</div>}
     </div>
   );
 };
