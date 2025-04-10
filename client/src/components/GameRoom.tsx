@@ -10,22 +10,18 @@ interface GameRoomProps {
 const GameRoom: React.FC<GameRoomProps> = ({ roomState }) => {
 
   if (!roomState) {
-    return <div>Loading...</div>;
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
   return (
     <div>
-      {roomState ? (
-        <div>
-          {roomState.active ? (
-            <Game roomState={roomState} />
-          ) : (
-            <WaitingRoom roomState={roomState} />
-          )}
-        </div>
-      ) : (
-        <p>Loading...</p>
-      )}
+      <div>
+        {roomState.active ? (
+          <Game roomState={roomState} />
+        ) : (
+          <WaitingRoom roomState={roomState} />
+        )}
+      </div>
     </div>
   );
 }

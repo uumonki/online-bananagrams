@@ -2,16 +2,19 @@ import { Server, Socket } from 'socket.io';
 import { Player } from 'types';
 import Room from './Room';
 
+type PlayerId = string;
+type RoomPin = string;
+
 export default class RoomManager {
   // invariant: all rooms are non-empty
-  private rooms: Map<string, Room> = new Map();
+  private rooms: Map<RoomPin, Room> = new Map();
   private currentRoomIndex = 0;
   private roomHash = (i: number) => i * 2654435761 % 10000;
   private atCapacity = () => this.rooms.size >= 10000;
 
   constructor(private io: Server) { }
 
-  createRoomWithPlayer(player: Player): string {
+  createRoomWithPlayer(player: Player): RoomPin {
     const pin = this.generateRoomPin();
     const room = new Room(pin, this.io);
     room.connectPlayer(player.socketId, player.nickname);
@@ -19,11 +22,11 @@ export default class RoomManager {
     return pin;
   }
 
-  closeRoom(pin: string) {
+  closeRoom(pin: RoomPin) {
     this.rooms.delete(pin);
   }
 
-  addPlayerToRoom(pin: string, player: Player) {
+  addPlayerToRoom(pin: RoomPin, player: Player) {
     if (this.hasRoom(pin)) {
       const room = this.rooms.get(pin);
       room!.connectPlayer(player.socketId, player.nickname);
@@ -38,10 +41,24 @@ export default class RoomManager {
     }
   }
 
-  startGameWithOwnerId(pin: string, ownerId: string) {
+  startGameWithOwnerId(pin: RoomPin, ownerId: PlayerId) {
     if (this.hasRoom(pin)) {
       const room = this.rooms.get(pin);
       room!.handleStartGame(ownerId);
+    }
+  }
+
+  flipLetter(pin: RoomPin, socketId: PlayerId) {
+    if (this.hasRoom(pin)) {
+      const room = this.rooms.get(pin);
+      room!.handleFlip(socketId);
+    }
+  }
+
+  submitWord(pin: RoomPin, socketId: PlayerId, word: string, originPlayerId?: PlayerId, originWord?: string) {
+    if (this.hasRoom(pin)) {
+      const room = this.rooms.get(pin);
+      return room!.handleWordSubmission(socketId, word, originPlayerId, originWord);
     }
   }
 
@@ -49,36 +66,35 @@ export default class RoomManager {
     return [...this.rooms.values()].find(room => room.hasPlayer(socket.id));
   }
 
-  hasRoom(pin: string): boolean {
+  hasRoom(pin: RoomPin): boolean {
     return this.rooms.has(pin);
   }
 
-  roomHasEnoughPlayers(pin: string): boolean {
+  roomHasEnoughPlayers(pin: RoomPin): boolean {
     // requires hasRoom(pin) to be true
     return this.rooms.get(pin)!.hasEnoughPlayers();
   }
 
-  roomFull(pin: string): boolean {
+  roomFull(pin: RoomPin): boolean {
     // requires hasRoom(pin) to be true
     return this.rooms.get(pin)!.isFull();
   }
 
-  hasNickname(pin: string, nickname: string): boolean {
+  hasNickname(pin: RoomPin, nickname: string): boolean {
     // requires hasRoom(pin) to be true
     return this.rooms.get(pin)!.hasNickname(nickname);
   }
 
-  hasPlayer(pin: string, socketId: string): boolean {
+  hasPlayer(pin: RoomPin, playerId: PlayerId): boolean {
     // requires hasRoom(pin) to be true
-    return this.rooms.get(pin)!.hasPlayer(socketId);
+    return this.rooms.get(pin)!.hasPlayer(playerId);
   }
 
-  getRoomState(pin: string) {
-    // requires hasRoom(pin) to be true
+  getRoomState(pin: RoomPin) {
     return this.rooms.get(pin)?.state;
   }
 
-  private generateRoomPin(): string {
+  private generateRoomPin(): RoomPin {
     if (this.atCapacity()) {
       return '';
     }

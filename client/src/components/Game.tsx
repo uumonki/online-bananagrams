@@ -1,5 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { RoomState } from '../../../server/src/types';
+import findWordConstructions from '../utils/findWordConstructions';
+import Opponents from './Opponents';
+import CentralPile from './CentralPile';
+import { WordTiles } from './Tiles';
 import socket from '../socket';
 
 interface GameProps {
@@ -7,95 +11,128 @@ interface GameProps {
 }
 
 const Game: React.FC<GameProps> = ({ roomState }) => {
-  const [letters, setLetters] = useState<string[]>([]);
-  const [word, setWord] = useState('');
-  const [status, setStatus] = useState('');
-  const [yourTurn, setYourTurn] = useState(false);
+  const [input, setInput] = useState('');
+  const inputRef = useRef<string>('');
+  const inputElementRef = useRef<HTMLInputElement>(null);
+  const roomStateRef = useRef<RoomState>(roomState);
+  const thisPlayerIdRef = useRef<string>(socket.id!);
 
   useEffect(() => {
-    socket.on('table_updated', (data: { letters: string[] }) => {
-      setLetters(data.letters);
-    });
+    inputRef.current = input;
+  }, [input]);
 
-    socket.on('your_turn', () => {
-      setYourTurn(true);
-      setStatus("It's your turn! You have 1 minute.");
-    });
+  useEffect(() => {
+    roomStateRef.current = roomState;
+  }, [roomState]);
 
-    socket.on('word_accepted', ({ word }) => {
-      setStatus(`Word accepted: ${word}`);
-      setWord('');
-    });
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // if letter pressed, add it to the input
+      if (e.key.length === 1 && /^[a-zA-Z]$/.test(e.key)) {
+        setInput((prev) => prev + e.key.toUpperCase());
+      }
+      // if backspace pressed, remove last letter
+      else if (e.key === 'Backspace') {
+        setInput((prev) => prev.slice(0, -1));
+      }
+      // if enter pressed, send the word
+      else if (e.key === 'Enter') {
+        handleSubmit();
+        setInput('');
+      }
+      // if escape pressed, clear the input
+      else if (e.key === 'Escape') {
+        setInput('');
+      }
+      // if space pressed, attempt to flip letter
+      else if (e.key === ' ') {
+        if (roomStateRef.current.currentPlayerId === thisPlayerIdRef.current) {
+          socket.emit('flip_letter', roomStateRef.current.pin);
+        }
+      }
+    };
 
-    socket.on('word_rejected', ({ reason }) => {
-      setStatus(`Word rejected: ${reason}`);
-    });
-
-    socket.on('game_over', () => {
-      setStatus('Game over!');
-    });
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      socket.off('table_updated');
-      socket.off('your_turn');
-      socket.off('word_accepted');
-      socket.off('word_rejected');
-      socket.off('game_over');
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
-  const submitWord = () => {
-    if (!word.trim()) return;
-    socket.emit('submit_word', { word: word.trim(), pin: roomState.pin });
-  };
+  useEffect(() => {
+    socket.on('word_submit_failed', () => {
+      alert('Invalid word!');
+      setInput('');
+    });
 
-  const flipLetter = () => {
-    socket.emit('flip_letter', { pin: roomState.pin });
-    setYourTurn(false);
-    setStatus('Flipped a letter.');
+    socket.on('word_submitted', () => {
+      setInput('');
+    });
+
+    return () => {
+      socket.off('word_submit_failed');
+      socket.off('word_submitted');
+    };
+  }, []);
+
+  const handleSubmit = () => {
+    const word = inputRef.current.trim().toUpperCase();
+    if (word.length > 0) {
+      const constructions = findWordConstructions(word, roomStateRef.current.gameState);
+      console.log(constructions);
+      if (constructions.length === 0) {
+        alert('Invalid word!');
+        return;
+      }
+      const play = constructions[0];
+      if (play === 'FromCentralPile') {
+        socket.emit('submit_word', roomStateRef.current.pin, word);
+        return;
+      } else {
+        const { originPlayer, originWord } = play as { originPlayer: string; originWord: string };
+        socket.emit('submit_word', roomStateRef.current.pin, word, originPlayer, originWord);
+        return;
+      }
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <pre>
-        <code>{JSON.stringify(roomState, null, 2)}</code>
-      </pre>
-      <p>Room {roomState.pin}</p>
-      <div className="flex flex-wrap gap-2">
-        {letters.map((char, idx) => (
-          <span
-            key={idx}
-            className="text-2xl border px-2 py-1 rounded bg-yellow-100"
-          >
-            {char.toUpperCase()}
-          </span>
-        ))}
+    <div className="w-screen h-screen flex flex-col">
+      {/* Top 40% Opponents Words */}
+      <div className="h-[40%] w-full">
+        <Opponents roomState={roomState} />
       </div>
 
-      <div className="flex gap-2">
-        <input
-          className="border px-2 py-1"
-          value={word}
-          onChange={(e) => setWord(e.target.value)}
-          placeholder="Enter word"
-        />
-        <button
-          className="px-4 py-2 bg-green-500 text-white rounded"
-          onClick={submitWord}
-        >
-          Submit
-        </button>
-        {yourTurn && (
-          <button
-            className="px-4 py-2 bg-blue-500 text-white rounded"
-            onClick={flipLetter}
-          >
-            Flip
-          </button>
-        )}
-      </div>
+      {/* Bottom 60% divided into left and right halves */}
+      <div className="h-[60%] w-full flex">
+        {/* Bottom Left - Revealed Letters and Tiles Left */}
+        <div className="w-1/2 h-full p-4">
+          <CentralPile
+            revealedLetters={roomState.gameState.revealedLetters}
+            remainingLetters={roomState.gameState.remainingLetters}
+            isPlayerTurn={roomState.currentPlayerId === thisPlayerIdRef.current}
+          />
+        </div>
 
-      <div>{status}</div>
+        {/* Bottom Right - Player Words + Input */}
+        <div className="w-1/2 h-full p-4 flex flex-col justify-end">
+          <div className="mb-4 flex flex-wrap-reverse content-end">
+            {(roomState.gameState.playerWords[thisPlayerIdRef.current] || []).map((word, index) => (
+              <div key={index} className="m-1">
+                <WordTiles>{word}</WordTiles>
+              </div>
+            ))}
+          </div>
+          <input
+            ref={inputElementRef}
+            type="text"
+            value={input}
+            readOnly
+            className="w-full p-2 border rounded bg-white text-black"
+            placeholder="Start typing anywhere..."
+          />
+        </div>
+      </div>
     </div>
   );
 };

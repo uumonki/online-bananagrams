@@ -73,4 +73,26 @@ export const handleConnection = (socket: Socket, roomManager: RoomManager) => {
     roomManager.startGameWithOwnerId(pin, socket.id);
   }
   );
+
+  socket.on('flip_letter', (pin: string) => {
+    if (!roomManager.hasRoom(pin)) {
+      socket.emit('room_not_found');
+      return;
+    }
+    roomManager.flipLetter(pin, socket.id);
+  });
+
+  socket.on('submit_word', (pin: string, word: string, originPlayerId?: string, originWord?: string) => {
+    if (!roomManager.hasRoom(pin)) {
+      socket.emit('room_not_found');
+      return;
+    }
+    const success = roomManager.submitWord(pin, socket.id, word, originPlayerId, originWord)!;
+    if (!success) {
+      socket.emit('word_submit_failed');
+    } else {
+      socket.emit('word_submitted');
+    }
+  });
+
 };

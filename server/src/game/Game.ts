@@ -99,9 +99,10 @@ export default class Game {
   ): MultiSet<string> | undefined {
     const wordLetters = MultiSet.from(word);
     const targetWordLetters = MultiSet.from(targetWord);
-    const isValidSteal = (this.playerHasWord(targetPlayerId, targetWord) &&
-      MultiSet.isSubset(targetWordLetters, wordLetters)) &&
-      word.length > targetWord.length;
+    const isValidSteal =
+      word.length > targetWord.length &&
+      this.playerHasWord(targetPlayerId, targetWord) &&
+      MultiSet.isSubset(targetWordLetters, wordLetters);
 
     if (isValidSteal) return subtractMultiSet(wordLetters, targetWordLetters);
   }

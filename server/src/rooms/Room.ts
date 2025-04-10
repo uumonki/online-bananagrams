@@ -4,16 +4,18 @@ import { Timer, UniqueRecord } from 'utils';
 import Game from 'game/Game';
 import { MAX_PLAYERS, TURN_TIMEOUT_MS, INACTIVE_TURN_TIMEOUT_MS, MIN_PLAYERS } from 'config';
 
+type PlayerId = string;
+
 // TODO: prompt when multiple steals available
 export default class Room {
   active: boolean = false;
 
-  private players: string[] = [];
+  private players: PlayerId[] = [];
   // invariant: set(players) = playerNicknames.keys()
-  private playerNicknames: UniqueRecord<string, string> = new UniqueRecord();
+  private playerNicknames: UniqueRecord<PlayerId, string> = new UniqueRecord();
   // TODO: Implement inactive players
-  private inactivePlayers = new Set<string>();
-  private disconnectedPlayers = new Set<string>();
+  private inactivePlayers = new Set<PlayerId>();
+  private disconnectedPlayers = new Set<PlayerId>();
   private currentPlayerIndex = 0;
   private currentGame: Game = new Game();
 
@@ -78,7 +80,7 @@ export default class Room {
     return this.playerNicknames.has(nickname);
   }
 
-  connectPlayer(playerId: string, nickname: string): boolean {
+  connectPlayer(playerId: PlayerId, nickname: string): boolean {
     if (!this.players.includes(playerId) && !this.isFull()) {
       if (this.playerNicknames.set(playerId, nickname)) {
         // nickname is unique, add player
@@ -94,18 +96,18 @@ export default class Room {
     return false;
   }
 
-  private reconnectPlayer(playerId: string) {
+  private reconnectPlayer(playerId: PlayerId) {
     if (this.disconnectedPlayers.delete(playerId))
       this.broadcastState();
   }
 
-  private activatePlayer(playerId: string) {
+  private activatePlayer(playerId: PlayerId) {
     if (this.inactivePlayers.delete(playerId) || this.disconnectedPlayers.delete(playerId)) {
       this.broadcastState();
     }
   }
 
-  disconnectPlayer(playerId: string) {
+  disconnectPlayer(playerId: PlayerId) {
     if (this.hasPlayer(playerId)) {
       if (!this.active) this.removePlayer(playerId);
       else {
@@ -118,7 +120,7 @@ export default class Room {
     }
   }
 
-  private removePlayer(playerId: string) {
+  private removePlayer(playerId: PlayerId) {
     this.players = this.players.filter(p => p !== playerId);
     this.playerNicknames.remove(playerId);
     this.inactivePlayers.delete(playerId);
@@ -136,11 +138,11 @@ export default class Room {
 
   isEmpty = () => this.numConnectedPlayers <= 0;
 
-  hasPlayer(playerId: string) {
+  hasPlayer(playerId: PlayerId) {
     return this.players.includes(playerId);
   }
 
-  playerIsActive(playerId: string) {
+  playerIsActive(playerId: PlayerId) {
     return !this.inactivePlayers.has(playerId) && !this.disconnectedPlayers.has(playerId);
   }
 
@@ -177,29 +179,33 @@ export default class Room {
     return nextIndex;
   }
 
-  handleStartGame(playerId: string) {
+  handleStartGame(playerId: PlayerId) {
     if (playerId !== this.ownerId) return;
     if (this.numPlayers < 2) return;
     this.startGame();
   }
 
-  handleFlip(playerId: string) {
+  handleFlip(playerId: PlayerId) {
     this.activatePlayer(playerId);
     if (this.players[this.currentPlayerIndex] !== playerId) return;
     this.flipAndAdvance();
   }
 
-  handleWordSubmission(playerId: string, word: string, originPlayerId?: string, originWord?: string) {
+  handleWordSubmission(playerId: PlayerId, word: string, originPlayerId?: PlayerId, originWord?: string) {
     this.activatePlayer(playerId);
-    if (originPlayerId && originWord) {
-      this.currentGame.stealWord(playerId, word, originPlayerId, originWord);
-    } else {
+    const success = (originPlayerId && originWord) ?
+      this.currentGame.stealWord(playerId, word, originPlayerId, originWord) :
       this.currentGame.claimWord(playerId, word);
+
+    if (success) {
+      // Interrupt turn
+      this.currentPlayerIndex = this.players.indexOf(playerId);
+      this.startTurn();
+      return true;
     }
 
-    // Interrupt turn
-    this.currentPlayerIndex = this.players.indexOf(playerId);
     this.startTurn();
+    return false;
   }
 
   broadcastState() {

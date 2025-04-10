@@ -1,23 +1,26 @@
+type PlayerId = string;
+type RoomPin = string;
+
 export interface GameState {
   revealedLetters: string[];
   remainingLetters: number;
-  playerWords: Record<string, string[]>;
+  playerWords: Record<PlayerId, string[]>;
 }
 
 export interface RoomState {
-  pin: string;
+  pin: RoomPin;
   active: boolean;
-  players: string[];
-  playerNicknames: Record<string, string>;
-  ownerId: string;
-  inactivePlayers: string[];
-  disconnectedPlayers: string[];
-  currentPlayerId: string;
+  players: PlayerId[];
+  playerNicknames: Record<PlayerId, string>;
+  ownerId: PlayerId;
+  inactivePlayers: PlayerId[];
+  disconnectedPlayers: PlayerId[];
+  currentPlayerId: PlayerId;
   turnTimeout: number;
   gameState: GameState;
 }
 
 export interface Player {
-  socketId: string;
+  socketId: PlayerId;
   nickname: string;
 }

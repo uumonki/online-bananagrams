@@ -37,7 +37,7 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({ roomState }) => {
   };
 
   return (
-    <div className="flex flex-col space-y-2 items-center justify-center h-screen">
+    <div className="flex flex-col space-y-2 items-center justify-center h-screen w-screen">
       <p className="text-lg text-center text-black">
         Room PIN: {roomState.pin}
       </p>
